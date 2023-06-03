@@ -1,10 +1,6 @@
 {-# LANGUAGE GADTs #-}
 module Exercises where
 
-
-
-
-
 {- ONE -}
 
 -- | Let's introduce a new class, 'Countable', and some instances to match.
@@ -17,30 +13,30 @@ instance Countable Bool where count x = if x then 1 else 0
 -- things.
 
 data CountableList where
-  -- ...
+  CountableNil :: CountableList
+  CountableCons :: Countable a => a -> CountableList -> CountableList
 
 
 -- | b. Write a function that takes the sum of all members of a 'CountableList'
 -- once they have been 'count'ed.
 
 countList :: CountableList -> Int
-countList = error "Implement me!"
+countList CountableNil         = 0
+countList (CountableCons x xs) = count x + countList xs
 
 
 -- | c. Write a function that removes all elements whose count is 0.
 
 dropZero :: CountableList -> CountableList
-dropZero = error "Implement me!"
+dropZero CountableNil = CountableNil
+dropZero (CountableCons x xs) = if count x == 0 then dropZero xs else CountableCons x (dropZero xs)
 
 
 -- | d. Can we write a function that removes all the things in the list of type
 -- 'Int'? If not, why not?
 
 filterInts :: CountableList -> CountableList
-filterInts = error "Contemplate me!"
-
-
-
+filterInts = error "Cannot implement this because I know nothing about the type inside the CountableCount"
 
 
 {- TWO -}
@@ -48,27 +44,47 @@ filterInts = error "Contemplate me!"
 -- | a. Write a list that can take /any/ type, without any constraints.
 
 data AnyList where
-  -- ...
+  ANil :: AnyList
+  ACon :: a -> AnyList -> AnyList
 
 -- | b. How many of the following functions can we implement for an 'AnyList'?
 
-reverseAnyList :: AnyList -> AnyList
-reverseAnyList = undefined
+appendAnyList :: a -> AnyList -> AnyList
+appendAnyList x ANil        = ACon x ANil
+appendAnyList x (ACon y ys) = ACon x $ appendAnyList x ys
 
+concatAnyList :: AnyList -> AnyList -> AnyList
+concatAnyList ANil xs        = xs
+concatAnyList xs ANil        = xs
+concatAnyList xs (ACon y ys) = concatAnyList (appendAnyList y xs) ys
+
+
+reverseAnyList :: AnyList -> AnyList
+reverseAnyList ANil        = ANil
+reverseAnyList (ACon x xs) = appendAnyList x (reverseAnyList xs)
+
+-- Impossible to implement "properly", forall a . a -> Bool cannot be used here
 filterAnyList :: (a -> Bool) -> AnyList -> AnyList
-filterAnyList = undefined
+filterAnyList _ ANil = ANil
+filterAnyList f (ACon x xs) = if True then ACon x (filterAnyList f xs) else filterAnyList f xs
 
 lengthAnyList :: AnyList -> Int
-lengthAnyList = undefined
+lengthAnyList ANil        = 0
+lengthAnyList (ACon _ xs) = 1 + lengthAnyList xs
 
+-- Impossible to implement "properly" the monoid cannot be related with the existential *a*
 foldAnyList :: Monoid m => AnyList -> m
-foldAnyList = undefined
+foldAnyList = const mempty
 
 isEmptyAnyList :: AnyList -> Bool
-isEmptyAnyList = undefined
+isEmptyAnyList ANil = True
+isEmptyAnyList _    = False
 
+
+-- Impossible
 instance Show AnyList where
   show = error "What about me?"
+
 
 
 
