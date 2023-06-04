@@ -17,7 +17,7 @@ just good documentation.. -}
   by using the following import.
 -}
 
-import Data.Kind -- Type = (*)
+import           Data.Kind
 
 {-
   This is a good habit to adopt, as '*' is going to be deprecated soon, in
@@ -29,7 +29,7 @@ class OfKindType a
 
 instance OfKindType  Bool
 instance OfKindType  String         -- Which extension did we need
-instance OfKindType (Maybe (IO ())) -- to get /these/ to compile?
+instance OfKindType (Maybe (IO ())) -- to get /these/ to compile? (FlexibleInstances :) )
 
 {-
   We can start with an intuition that the 'Type' kind is inhabited by /things
@@ -62,40 +62,40 @@ instance OfKindType (Maybe (IO ())) -- to get /these/ to compile?
 
   The big problem here is that, in the absence of a better idea, GHC will
   assume that a typeclass parameter is of kind 'Type'.
-  
+
   How do we tell it otherwise?
-  
+
   One way is to give GHC more information about our type by filling in method
   signatures for our class.
-  
+
   For example, let's take a look at a simplfied definition for the Functor class:
 -}
 
 class Functor f where
   fmap :: (a -> b) -> f a -> f b
-  
+
 {-
   Although @f@ is on its own here in the class definition, if we take a closer
   look at the signature for @fmap@ we can see that @f@ never appears on its
   own, but it sits right in front of another type variable every time it shows
   up: @f a@ and @f b@.
-  
+
   This information alone is enough for GHC to infer that the type of @f@ is
   actually ’* -> *’.
-  
+
   Let's try another example:
 -}
 
 class Stuff a where
   thing :: a b c d
-  
+
 {-
   Here, we can see @a@ has 3 more type variables right after it: @b@, @c@ and @d@.
   This means that @a@ will be given a kind of ’* -> * -> * -> *’.
 
   Another way to let GHC know this is by explicitly providing it with a kind
   signature in the class definition itself.
-  
+
   This is exactly what the KindSignatures extension allows us to do:
 -}
 
