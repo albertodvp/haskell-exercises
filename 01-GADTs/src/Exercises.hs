@@ -86,10 +86,6 @@ instance Show AnyList where
   show = error "What about me?"
 
 
-
-
-
-
 {- THREE -}
 
 -- | Consider the following GADT:
@@ -111,15 +107,22 @@ transformable2 = TransformWith (uncurry (++)) ("Hello,", " world!")
 -- | a. Which type variable is existential inside 'TransformableTo'? What is
 -- the only thing we can do to it?
 
+-- a. The existential type variable is `input` the only thing we can do with it is applying the function provided `input -> output`
+
 -- | b. Could we write an 'Eq' instance for 'TransformableTo'? What would we be
 -- able to check?
+
+-- b. We can create an Eq instance checking the result of the transformation, for which we also have to set the `Eq` constrain
+
+instance Eq out => Eq (TransformableTo out) where
+  (TransformWith f x) == (TransformWith g y) = f x == g y
+
 
 -- | c. Could we write a 'Functor' instance for 'TransformableTo'? If so, write
 -- it. If not, why not?
 
-
-
-
+instance Functor TransformableTo where
+  fmap f (TransformWith g x) = TransformWith (f . g) x
 
 {- FOUR -}
 
@@ -131,13 +134,23 @@ data EqPair where
 -- | a. There's one (maybe two) useful function to write for 'EqPair'; what is
 -- it?
 
+eq :: EqPair -> Bool
+eq (EqPair a a') = a == a'
+
+ne :: EqPair -> Bool
+ne = not . eq
+
 -- | b. How could we change the type so that @a@ is not existential? (Don't
 -- overthink it!)
+
+data EqPair' a where
+  EqPair' :: Eq a => a -> a -> EqPair' a
 
 -- | c. If we made the change that was suggested in (b), would we still need a
 -- GADT? Or could we now represent our type as an ADT?
 
-
+-- We could write this with {-# LANGUAGE DatatypeContexts #-}, edit: it seems it is included in recent versions of GHC
+data Num a => EqPair'' a = EqPair'' a a
 
 
 
@@ -164,18 +177,25 @@ getInt (IntBox int _) = int
 -- pattern-match:
 
 getInt' :: MysteryBox String -> Int
-getInt' _doSomeCleverPatternMatching = error "Return that value"
+getInt' (StringBox _ ((IntBox int _))) = int
 
 -- | b. Write the following function. Again, don't overthink it!
 
 countLayers :: MysteryBox a -> Int
-countLayers = error "Implement me"
+countLayers EmptyBox          = 0
+countLayers (IntBox _ box)    = 1 + countLayers box
+countLayers (StringBox _ box) = 1 + countLayers box
+countLayers (BoolBox _ box)   = 1 + countLayers box
+
 
 -- | c. Try to implement a function that removes one layer of "Box". For
 -- example, this should turn a BoolBox into a StringBox, and so on. What gets
 -- in our way? What would its type be?
 
-
+-- We know nothing about b, it's impossible to produce valid value. Remember, its forall b
+removeLayer :: MysteryBox a -> Maybe (MysteryBox b)
+removeLayer EmptyBox       = Nothing
+-- removeLayer (IntBox _ box) = Just box
 
 
 
