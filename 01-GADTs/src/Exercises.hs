@@ -1,6 +1,9 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
 module Exercises where
 
+import           Control.Applicative (liftA2)
 {- ONE -}
 
 -- | Let's introduce a new class, 'Countable', and some instances to match.
@@ -198,7 +201,6 @@ removeLayer EmptyBox       = Nothing
 -- removeLayer (IntBox _ box) = Just box
 
 
-
 {- SIX -}
 
 -- | We can even use our type parameters to keep track of the types inside an
@@ -208,6 +210,7 @@ data HList a where
   HNil  :: HList ()
   HCons :: head -> HList tail -> HList (head, tail)
 
+
 exampleHList :: HList (String, (Int, (Bool, ())))
 exampleHList = HCons "Tom" (HCons 25 (HCons True HNil))
 
@@ -216,16 +219,22 @@ exampleHList = HCons "Tom" (HCons 25 (HCons True HNil))
 -- need to pattern-match on HNil, and therefore the return type shouldn't be
 -- wrapped in a 'Maybe'!
 
+headHL :: HList (a, b) -> a
+headHL (HCons h _) = h
+
 -- | b. Currently, the tuples are nested. Can you pattern-match on something of
 -- type @HList (Int, String, Bool, ())@? Which constructor would work?
 
 patternMatchMe :: HList (Int, String, Bool, ()) -> Int
+-- patternMatchMe HNil = 42
+-- patternMatchMe HCons h hl = ?
 patternMatchMe = undefined
 
 -- | c. Can you write a function that appends one 'HList' to the end of
 -- another? What problems do you run into?
 
-
+-- Don't know the type of the result
+-- appendHL :: HList a -> HList b -> HList ?
 
 
 
@@ -240,11 +249,15 @@ data Branch left centre right
 -- /tree/. None of the variables should be existential.
 
 data HTree a where
-  -- ...
+  EmptyTree :: HTree Empty
+  BranchTree :: HTree a -> b -> HTree c -> HTree (Branch a b c)
 
 -- | b. Implement a function that deletes the left subtree. The type should be
 -- strong enough that GHC will do most of the work for you. Once you have it,
 -- try breaking the implementation - does it type-check? If not, why not?
+
+deleteLeft :: HTree (Branch a b c) -> HTree (Branch Empty b c)
+deleteLeft (BranchTree _ c r) = BranchTree EmptyTree c r
 
 -- | c. Implement 'Eq' for 'HTree's. Note that you might have to write more
 -- than one to cover all possible HTrees. You might also need an extension or
@@ -252,8 +265,13 @@ data HTree a where
 -- Recursion is your friend here - you shouldn't need to add a constraint to
 -- the GADT!
 
+instance Eq (HTree Empty) where
+  _ == _   = True
 
 
+instance (Eq (HTree a), Eq b, Eq (HTree c)) => Eq (HTree (Branch a b c)) where
+  BranchTree tl1 c1 tr1 == BranchTree tl2 c2 tr2 = tl1 == tl2 && c1 == c2 && tr1 == tr2
+  _ == _                   = False
 
 
 {- EIGHT -}
@@ -267,23 +285,33 @@ data HTree a where
 -- @
 
 data AlternatingList a b where
-  -- ...
+  AltNil :: AlternatingList a b
+  AltCons :: a -> AlternatingList b a  -> AlternatingList a b
 
 -- | b. Implement the following functions.
 
 getFirsts :: AlternatingList a b -> [a]
-getFirsts = error "Implement me!"
+getFirsts AltNil           = []
+getFirsts (AltCons a tail) = a: getSeconds tail
 
 getSeconds :: AlternatingList a b -> [b]
-getSeconds = error "Implement me, too!"
+getSeconds AltNil           = []
+getSeconds (AltCons _ tail) = getFirsts tail
 
 -- | c. One more for luck: write this one using the above two functions, and
 -- then write it such that it only does a single pass over the list.
 
 foldValues :: (Monoid a, Monoid b) => AlternatingList a b -> (a, b)
-foldValues = error "Implement me, three!"
+foldValues = ((,) . mconcat . getFirsts) <*> (mconcat . getSeconds)
+foldValues' :: (Monoid a, Monoid b) => AlternatingList a b -> (a, b)
+foldValues' xs = (mconcat $ getFirsts xs, mconcat $ getSeconds xs)
 
-
+foldValues'' :: (Monoid a, Monoid b) => AlternatingList a b -> (a, b)
+foldValues'' AltNil          = (mempty, mempty)
+foldValues'' (AltCons a AltNil) = (a, mempty)
+foldValues'' (AltCons a tail)   = (a <> a', b)
+  where
+    (b, a') = foldValues'' tail
 
 
 
